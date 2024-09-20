@@ -2,7 +2,7 @@
 This is a tool to conveniently generate ALL changed content for a Hearthstone patch. Including in-game data which are not mentioned by Blizzard in official patch notes. Uses HearthstoneJSON's data to compare patch contents.
 
 ## Setup
-`git clone https://github.com/vghost01/hearthstone-card-change-lookup`
+Clone this repository with `git clone https://github.com/vghost01/hearthstone-card-change-lookup` or download it as a zip.
 
 Needs a working internet connection. Connects to HearthstoneJSON's site.
 
@@ -18,4 +18,6 @@ For example, by using the values `20457` and `20970`, which are patches `9.0.0.2
 * `SCALE`: Type either `basic` or `full`. `basic` will generate fewer card change types, mostly what a regular user might care about. `full` will generate every single card change type for a patch.
 
 ## Usage
-Simply run `HearthstoneCardChangeLookup.bat`.
+After configuring, run `CardChangeLookup.bat`.
+
+Alternatively on Mac/Linux, you can make `src/process.py` executable and run it from terminal.
