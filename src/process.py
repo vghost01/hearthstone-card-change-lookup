@@ -13,37 +13,37 @@ def create_tables(db, prev, cur, allowed_types):
     attack INTEGER,
     battlegroundsBuddyDbfId INTEGER,
     battlegroundsDarkmoonPrizeTurn INTEGER,
-    battlegroundsHero INTEGER,
+    battlegroundsHero BOOLEAN,
     battlegroundsNormalDbfId INTEGER,
     battlegroundsPremiumDbfId INTEGER,
     battlegroundsSkinParentId INTEGER,
     cardClass TEXT,
     classes TEXT,
-    collectible INTEGER,
+    collectible BOOLEAN,
     collectionText TEXT,
     cost INTEGER,
     countAsCopyOfDbfId INTEGER,
     dbfId INTEGER,
     durability INTEGER,
-    elite INTEGER,
+    elite BOOLEAN,
     faction TEXT,
     flavor TEXT,
-    hasDiamondSkin INTEGER,
+    hasDiamondSkin BOOLEAN,
     health INTEGER,
     heroPowerDbfId INTEGER,
-    hideCost INTEGER,
-    hideStats INTEGER,
+    hideCost BOOLEAN,
+    hideStats BOOLEAN,
     howToEarn TEXT,
     howToEarnGolden TEXT,
     id TEXT,
-    isBattlegroundsBuddy INTEGER,
-    isBattlegroundsPoolMinion INTEGER, 
-    isBattlegroundsPoolSpell INTEGER,
-    isMiniSet INTEGER,
+    isBattlegroundsBuddy BOOLEAN,
+    isBattlegroundsPoolMinion BOOLEAN, 
+    isBattlegroundsPoolSpell BOOLEAN,
+    isMiniSet BOOLEAN,
     mechanics TEXT,
     mercenariesAbilityCooldown INTEGER,
     mercenariesRole INTEGER,
-    multiClassGroup INTEGER,
+    multiClassGroup TEXT,
     name TEXT,
     overload INTEGER,
     puzzleType INTEGER,
@@ -58,7 +58,7 @@ def create_tables(db, prev, cur, allowed_types):
     targetingArrowText TEXT, 
     techLevel INTEGER,
     "text" TEXT,
-    type TEXT  
+    type TEXT 
     )""")
 
     db.execute("""
@@ -68,37 +68,37 @@ def create_tables(db, prev, cur, allowed_types):
     attack INTEGER,
     battlegroundsBuddyDbfId INTEGER,
     battlegroundsDarkmoonPrizeTurn INTEGER,
-    battlegroundsHero INTEGER,
+    battlegroundsHero BOOLEAN,
     battlegroundsNormalDbfId INTEGER,
     battlegroundsPremiumDbfId INTEGER,
     battlegroundsSkinParentId INTEGER,
     cardClass TEXT,
     classes TEXT,
-    collectible INTEGER,
+    collectible BOOLEAN,
     collectionText TEXT,
     cost INTEGER,
     countAsCopyOfDbfId INTEGER,
     dbfId INTEGER,
     durability INTEGER,
-    elite INTEGER,
+    elite BOOLEAN,
     faction TEXT,
     flavor TEXT,
-    hasDiamondSkin INTEGER,
+    hasDiamondSkin BOOLEAN,
     health INTEGER,
     heroPowerDbfId INTEGER,
-    hideCost INTEGER,
-    hideStats INTEGER,
+    hideCost BOOLEAN,
+    hideStats BOOLEAN,
     howToEarn TEXT,
     howToEarnGolden TEXT,
     id TEXT,
-    isBattlegroundsBuddy INTEGER,
-    isBattlegroundsPoolMinion INTEGER, 
-    isBattlegroundsPoolSpell INTEGER,
-    isMiniSet INTEGER,
+    isBattlegroundsBuddy BOOLEAN,
+    isBattlegroundsPoolMinion BOOLEAN, 
+    isBattlegroundsPoolSpell BOOLEAN,
+    isMiniSet BOOLEAN,
     mechanics TEXT,
     mercenariesAbilityCooldown INTEGER,
     mercenariesRole INTEGER,
-    multiClassGroup INTEGER,
+    multiClassGroup TEXT,
     name TEXT,
     overload INTEGER,
     puzzleType INTEGER,
@@ -113,7 +113,7 @@ def create_tables(db, prev, cur, allowed_types):
     targetingArrowText TEXT, 
     techLevel INTEGER,
     "text" TEXT,
-    type TEXT
+    type TEXT 
     )""")
 
     def insert_cards(table_name, cards):
@@ -131,7 +131,7 @@ def create_tables(db, prev, cur, allowed_types):
                     elif isinstance(value, list):
                         values.append(",".join(value))
                     else:
-                        values.append(value)
+                        values.append(str(value))
                 else:
                     values.append(None)
                 
@@ -145,18 +145,16 @@ def create_tables(db, prev, cur, allowed_types):
             db.executemany(sql, values_batch)
             print(f"{len(values_batch)} cards added to {table_name}")
 
-    # Insert OldCards
     print(f"Creating table OldCards with {len(prev)} cards")
     insert_cards("OldCards", prev)
 
-    # Insert NewCards
     print(f"Creating table NewCards with {len(cur)} cards")
     insert_cards("NewCards", cur)
 
     print("Finished creating tables")
 
-def check_changes(db, excluded_dbfIds, allowed_types, compare_type):
-    with open("result/CardChanges.txt", "w", encoding="utf-8") as CardChanges:
+def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build):
+    with open(f"result/CardChanges_{prev_build}-{current_build}.txt", "w", encoding="utf-8") as CardChanges:
         # Search for added cards
         sql = f"""SELECT NewCards.{compare_type}, NewCards.id, NewCards.name
                 FROM NewCards
@@ -229,19 +227,11 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type):
                 else:
                     line1 = str(row[3]) + " (id " + str(row[4]) + ") - Type: " + key + "\n"
                 CardChanges.write(line1)
-                line2 = "* Previous: " + ("NULL" if len(row1) == 0 else row1.replace('\n', '\\n')) + "\n"
+                line2 = "* Old: " + ("NULL" if len(row1) == 0 else row1.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line2)
                 line3 = "* New: " + ("NULL" if len(row2) == 0 else row2.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line3)
                 CardChanges.write("\n")
-
-def true_to_1(data):
-    if isinstance(data, dict):
-        return {key: (1 if value is True else true_to_1(value)) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [true_to_1(item) for item in data]
-    else:
-        return data
     
 def get_prev_data(prev_build, locale):
     url = f"https://api.hearthstonejson.com/v1/{prev_build}/{locale}/cards.json"
@@ -250,12 +240,11 @@ def get_prev_data(prev_build, locale):
 
     if response.status_code == 200:
         data = response.json()
-        fixed_data = true_to_1(data)
     else:
         print(f"Failed to retrieve data from HearthstoneJSON for build {prev_build}! Most likely you typed incorrect build numbers at config.ini. Error code: {response.status_code}")
         return False
     
-    return fixed_data
+    return data
 
 def get_current_data(current_build, locale):
     url = f"https://api.hearthstonejson.com/v1/{current_build}/{locale}/cards.json"
@@ -264,12 +253,11 @@ def get_current_data(current_build, locale):
 
     if response.status_code == 200:
         data = response.json()
-        fixed_data = true_to_1(data)
     else:
         print(f"Failed to retrieve data from HearthstoneJSON for build {current_build}! Most likely you typed incorrect build numbers at config.ini. Error code: {response.status_code}")
         return False
     
-    return fixed_data
+    return data
 
 def main():
     start_time = time.time()
@@ -348,8 +336,9 @@ def main():
     print("Creating tables...")
     create_tables(db, prev_build_data, current_build_data, allowed_types_set)
     print("Checking changes...")
-    check_changes(db, excluded_dbfIds, allowed_types, compare_type)
-    print(f"Done! Program finished in {int((time.time() - start_time))} seconds. The result can be viewed at result/CardChanges.txt")
+    check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build)
+    finish_time = int((time.time() - start_time))
+    print(f"Done! Program finished in {finish_time // 60} min {finish_time % 60} s. The result can be viewed at result/CardChanges_{prev_build}-{current_build}.txt")
 
 if __name__ == "__main__":
     main()
