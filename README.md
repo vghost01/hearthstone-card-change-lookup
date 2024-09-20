@@ -2,7 +2,7 @@
 This is a tool to conveniently generate ALL changed content for a Hearthstone patch. Including in-game data which are not mentioned by Blizzard in official patch notes. Uses HearthstoneJSON's data to compare patch contents.
 
 ## Setup
-Clone this repository with `git clone https://github.com/vghost01/hearthstone-card-change-lookup` or download it as a zip.
+Clone this repository with `git clone https://github.com/vghost01/hearthstone-card-change-lookup` or [download it as a zip](https://github.com/vghost01/hearthstone-card-change-lookup/archive/refs/heads/main.zip).
 
 Needs a working internet connection. Connects to HearthstoneJSON's site.
 
