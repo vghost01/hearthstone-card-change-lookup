@@ -12,7 +12,9 @@ Before running anything, adjust `config.ini` in Notepad or a similar app.
 * `PREVIOUS_BUILD`: The build number of the previous build to compare to.
 * `NEW_BUILD`: The build number of the new build to compare to.
 
-For example, by using the values `20457` and `20970`, which are patches `9.0.0.20457` and `9.1.0.20970`, the program will generate changes that happened between patches 9.0 and 9.1. To find the correct build number for a patch, you can use e.g. Hearthstone Wiki's [patch template page](https://hearthstone.wiki.gg/wiki/Template:Patches).
+For example, by using the values `20457` for `PREVIOUS_BUILD` and `20970` for `NEW_BUILD`, which are patches `9.0.0.20457` and `9.1.0.20970`, the program will generate changes that happened between patches 9.0 and 9.1. To find the correct build number for a patch, you can use e.g. Hearthstone Wiki's [patch template page](https://hearthstone.wiki.gg/wiki/Template:Patches).
+
+You should always use adjacent patches, not jump over ones. For example, don't compare patch 30.0 to 30.4 since this will include changes that may have happened in the other patches between those.
 
 * `LOCALE`: The language you want texts to appear in the resulting file. By default it's enUS for English, but it can be changed to any language Hearthstone is localized in. Older patches might not have localized data for all languages.
 * `SCALE`: Type either `basic` or `full`. `basic` will generate fewer card change types, mostly what a regular user might care about. `full` will generate every single card change type for a patch.
