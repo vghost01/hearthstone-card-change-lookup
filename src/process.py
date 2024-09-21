@@ -1,120 +1,69 @@
 import sqlite3
 import os
-import os.path
 import requests
 import configparser
 import time
 
 def create_tables(db, prev, cur, allowed_types):
-    db.execute("""
-    CREATE TABLE OldCards(
-    armor INTEGER,
-    artist TEXT,
-    attack INTEGER,
-    battlegroundsBuddyDbfId INTEGER,
-    battlegroundsDarkmoonPrizeTurn INTEGER,
-    battlegroundsHero BOOLEAN,
-    battlegroundsNormalDbfId INTEGER,
-    battlegroundsPremiumDbfId INTEGER,
-    battlegroundsSkinParentId INTEGER,
-    cardClass TEXT,
-    classes TEXT,
-    collectible BOOLEAN,
-    collectionText TEXT,
-    cost INTEGER,
-    countAsCopyOfDbfId INTEGER,
-    dbfId INTEGER,
-    durability INTEGER,
-    elite BOOLEAN,
-    faction TEXT,
-    flavor TEXT,
-    hasDiamondSkin BOOLEAN,
-    health INTEGER,
-    heroPowerDbfId INTEGER,
-    hideCost BOOLEAN,
-    hideStats BOOLEAN,
-    howToEarn TEXT,
-    howToEarnGolden TEXT,
-    id TEXT,
-    isBattlegroundsBuddy BOOLEAN,
-    isBattlegroundsPoolMinion BOOLEAN, 
-    isBattlegroundsPoolSpell BOOLEAN,
-    isMiniSet BOOLEAN,
-    mechanics TEXT,
-    mercenariesAbilityCooldown INTEGER,
-    mercenariesRole INTEGER,
-    multiClassGroup TEXT,
-    name TEXT,
-    overload INTEGER,
-    puzzleType INTEGER,
-    questReward TEXT,
-    race TEXT,
-    races TEXT,
-    rarity TEXT,
-    referencedTags TEXT,
-    "set" TEXT,
-    spellDamage INTEGER,
-    spellSchool TEXT,
-    targetingArrowText TEXT, 
-    techLevel INTEGER,
-    "text" TEXT,
-    type TEXT 
-    )""")
+    print("Creating tables...")
+    def make_table(table_name):
+        db.execute(f"""
+        CREATE TABLE {table_name}(
+        armor INTEGER,
+        artist TEXT,
+        attack INTEGER,
+        battlegroundsBuddyDbfId INTEGER,
+        battlegroundsDarkmoonPrizeTurn INTEGER,
+        battlegroundsHero BOOLEAN,
+        battlegroundsNormalDbfId INTEGER,
+        battlegroundsPremiumDbfId INTEGER,
+        battlegroundsSkinParentId INTEGER,
+        cardClass TEXT,
+        classes TEXT,
+        collectible BOOLEAN,
+        collectionText TEXT,
+        cost INTEGER,
+        countAsCopyOfDbfId INTEGER,
+        dbfId INTEGER,
+        durability INTEGER,
+        elite BOOLEAN,
+        faction TEXT,
+        flavor TEXT,
+        hasDiamondSkin BOOLEAN,
+        health INTEGER,
+        heroPowerDbfId INTEGER,
+        hideCost BOOLEAN,
+        hideStats BOOLEAN,
+        howToEarn TEXT,
+        howToEarnGolden TEXT,
+        id TEXT,
+        isBattlegroundsBuddy BOOLEAN,
+        isBattlegroundsPoolMinion BOOLEAN, 
+        isBattlegroundsPoolSpell BOOLEAN,
+        isMiniSet BOOLEAN,
+        mechanics TEXT,
+        mercenariesAbilityCooldown INTEGER,
+        mercenariesRole INTEGER,
+        multiClassGroup TEXT,
+        name TEXT,
+        overload INTEGER,
+        puzzleType INTEGER,
+        questReward TEXT,
+        race TEXT,
+        races TEXT,
+        rarity TEXT,
+        referencedTags TEXT,
+        "set" TEXT,
+        spellDamage INTEGER,
+        spellSchool TEXT,
+        targetingArrowText TEXT, 
+        techLevel INTEGER,
+        "text" TEXT,
+        type TEXT 
+        )""")
 
-    db.execute("""
-    CREATE TABLE NewCards(
-    armor INTEGER,
-    artist TEXT,
-    attack INTEGER,
-    battlegroundsBuddyDbfId INTEGER,
-    battlegroundsDarkmoonPrizeTurn INTEGER,
-    battlegroundsHero BOOLEAN,
-    battlegroundsNormalDbfId INTEGER,
-    battlegroundsPremiumDbfId INTEGER,
-    battlegroundsSkinParentId INTEGER,
-    cardClass TEXT,
-    classes TEXT,
-    collectible BOOLEAN,
-    collectionText TEXT,
-    cost INTEGER,
-    countAsCopyOfDbfId INTEGER,
-    dbfId INTEGER,
-    durability INTEGER,
-    elite BOOLEAN,
-    faction TEXT,
-    flavor TEXT,
-    hasDiamondSkin BOOLEAN,
-    health INTEGER,
-    heroPowerDbfId INTEGER,
-    hideCost BOOLEAN,
-    hideStats BOOLEAN,
-    howToEarn TEXT,
-    howToEarnGolden TEXT,
-    id TEXT,
-    isBattlegroundsBuddy BOOLEAN,
-    isBattlegroundsPoolMinion BOOLEAN, 
-    isBattlegroundsPoolSpell BOOLEAN,
-    isMiniSet BOOLEAN,
-    mechanics TEXT,
-    mercenariesAbilityCooldown INTEGER,
-    mercenariesRole INTEGER,
-    multiClassGroup TEXT,
-    name TEXT,
-    overload INTEGER,
-    puzzleType INTEGER,
-    questReward TEXT,
-    race TEXT,
-    races TEXT,
-    rarity TEXT,
-    referencedTags TEXT,
-    "set" TEXT,
-    spellDamage INTEGER,
-    spellSchool TEXT,
-    targetingArrowText TEXT, 
-    techLevel INTEGER,
-    "text" TEXT,
-    type TEXT 
-    )""")
+    make_table("OldCards")
+    make_table("NewCards")
 
     def insert_cards(table_name, cards):
         columns = [f'"{changeType}"' if changeType in ["set", "text"] else changeType for changeType in allowed_types]
@@ -154,6 +103,7 @@ def create_tables(db, prev, cur, allowed_types):
     print("Finished creating tables")
 
 def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build):
+    print("Checking changes...")
     with open(f"result/CardChanges_{prev_build}-{current_build}.txt", "w", encoding="utf-8") as CardChanges:
         # Search for added cards
         sql = f"""SELECT NewCards.{compare_type}, NewCards.id, NewCards.name
@@ -164,7 +114,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
         result = db.execute(sql).fetchall()
         has_cards = False
         for row in result:
-            if row[0] != None:
+            if row[0]:
                 has_cards = True
         if has_cards:
             CardChanges.write("##############################\nThe folowing cards were added:\n##############################\n\n")
@@ -188,7 +138,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
         result = db.execute(sql).fetchall()
         has_cards = False
         for row in result:
-            if row[0] != None:
+            if row[0]:
                 has_cards = True
         if has_cards:
             CardChanges.write("###############################\nThe folowing cards were removed:\n###############################\n\n")
@@ -232,113 +182,89 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
                 line3 = "* New: " + ("NULL" if len(row2) == 0 else row2.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line3)
                 CardChanges.write("\n")
-    
-def get_prev_data(prev_build, locale):
-    url = f"https://api.hearthstonejson.com/v1/{prev_build}/{locale}/cards.json"
-    response = requests.get(url)
-    response.encoding = 'utf-8'
 
-    if response.status_code == 200:
-        data = response.json()
-    else:
-        print(f"Failed to retrieve data from HearthstoneJSON for build {prev_build}! Most likely you typed incorrect build numbers at config.ini. Error code: {response.status_code}")
-        return False
-    
-    return data
-
-def get_current_data(current_build, locale):
-    url = f"https://api.hearthstonejson.com/v1/{current_build}/{locale}/cards.json"
-    response = requests.get(url)
-    response.encoding = 'utf-8'
-
-    if response.status_code == 200:
-        data = response.json()
-    else:
-        print(f"Failed to retrieve data from HearthstoneJSON for build {current_build}! Most likely you typed incorrect build numbers at config.ini. Error code: {response.status_code}")
-        return False
-    
-    return data
-
-def main():
-    start_time = time.time()
+def load_config():
     config = configparser.ConfigParser()
-    try:
-        config.read("config.ini")
-    except:
-        print("Error: Could not find config.ini file.")
+    config.read("config.ini")
+    
     settings = config["SETTINGS"]
     try:
-        prev_build = settings.getint('PREVIOUS_BUILD')
-        current_build = settings.getint('NEW_BUILD')
+        prev_build = settings.getint("PREVIOUS_BUILD")
+        current_build = settings.getint("NEW_BUILD")
         locale = settings.get("LOCALE")
         scale = settings.get("SCALE")
     except:
-        print("Error: could not get contents of config.ini")
+        print("Error: Could not load contents of config.ini. Check that all values are correctly formatted.")
+        return None
 
-    try:
-        test = prev_build, current_build
-    except UnboundLocalError:
-        print("Error: config.ini was not setup correctly. The values of PREVIOUS_BUILD and CURRENT_BUILD must be numbers with no other text!")
-        return
-    
-    if prev_build == 0 or current_build == 0:
-        print("Error: You forgot to set up config.ini! Read the README.md again to proceed.")
-        return
-    
+    if (prev_build == 0 and current_build == 0) or (prev_build >= current_build):
+        print("Error: Invalid build numbers in config.ini. Must be non-0 and PREVIOUS_BUILD must be smaller than CURRENT_BUILD.")
+        return None
     if locale not in ["deDE", "enUS", "esES", "esMX", "frFR", "itIT", "jaJP", "koKR", "plPL", "ptBR", "ruRU", "thTH", "zhCN", "zhTW"]:
-        print("Error: LOCALE is invalid at config.ini. Must be one of the values specified in the file.")
-        return
-    
+        print("Error: Invalid LOCALE in config.ini.")
+        return None
     if scale not in ["basic", "full"]:
-        print("Error: SCALE is invalid at config.ini. Must be basic or full.")
-        return
+        print("Error: Invalid SCALE in config.ini.")
+        return None
     
-    if prev_build < 18336:
-        compare_type = "id"
+    return prev_build, current_build, locale, scale
+
+def fetch_json(build, locale):
+    url = f"https://api.hearthstonejson.com/v1/{build}/{locale}/cards.json"
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
     else:
-        compare_type = "dbfId"
+        print(f"Failed to fetch data for build {build}. Double-check your build numbers and locale in config.ini. Status code: {response.status_code}")
+        return None
 
-    if os.path.exists("src/cards.db"):
-        os.remove("src/cards.db")
-
-    db = sqlite3.connect("src/cards.db")
+def setup_db(db_path="src/cards.db"):
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    db = sqlite3.connect(db_path)
     db.isolation_level = None
+    return db
 
-    excluded_dbfIds = set()
-
+def set_types(scale):
     if scale == "basic":
-        allowed_types = ['cost', 'techLevel',  'attack', 'health',  'text', 'durability', 'armor', 'race', 'races', 'spellSchool',  
-                        'isBattlegroundsPoolMinion', 'isBattlegroundsPoolSpell', 'mercenariesAbilityCooldown', 'mercenariesRole', 
-                        'artist', 'cardClass', 'collectible', 'name', 'dbfId', 'id', 'elite', 'flavor', 'howToEarn', 'howToEarnGolden', 
-                        'mechanics', 'referencedTags', 'rarity', 'set', 'type', 'targetingArrowText']
+        return ['cost', 'techLevel',  'attack', 'health',  'text', 'durability', 'armor', 'race', 'races', 'spellSchool',  
+                'isBattlegroundsPoolMinion', 'isBattlegroundsPoolSpell', 'mercenariesAbilityCooldown', 'mercenariesRole', 
+                'artist', 'cardClass', 'collectible', 'name', 'dbfId', 'id', 'elite', 'flavor', 'howToEarn', 'howToEarnGolden', 
+                'mechanics', 'referencedTags', 'rarity', 'set', 'type', 'targetingArrowText']
     else:
-        allowed_types = ['armor', 'artist', 'attack', 'battlegroundsBuddyDbfId', 'battlegroundsDarkmoonPrizeTurn', 
-                        'battlegroundsHero', 'battlegroundsNormalDbfId', 'battlegroundsPremiumDbfId', 'battlegroundsSkinParentId', 
-                        'cardClass', 'classes', 'collectible', 'collectionText', 'cost', 'countAsCopyOfDbfId', 'dbfId', 
-                        'durability', 'elite', 'faction', 'flavor', 'hasDiamondSkin', 'health', 'heroPowerDbfId', 
-                        'hideCost', 'hideStats', 'howToEarn', 'howToEarnGolden', 'id', 'isBattlegroundsBuddy', 
-                        'isBattlegroundsPoolMinion', 'isBattlegroundsPoolSpell', 'isMiniSet', 'mechanics', 
-                        'mercenariesAbilityCooldown', 'mercenariesRole', 'multiClassGroup', 'name', 'overload', 
-                        'puzzleType', 'questReward', 'race', 'races', 'rarity', 'referencedTags', 'set', 'spellDamage', 
-                        'spellSchool', 'targetingArrowText', 'techLevel', 'text', 'type']
-    
-    allowed_types_set = set(allowed_types)
-    
+        return ['armor', 'artist', 'attack', 'battlegroundsBuddyDbfId', 'battlegroundsDarkmoonPrizeTurn', 
+                'battlegroundsHero', 'battlegroundsNormalDbfId', 'battlegroundsPremiumDbfId', 'battlegroundsSkinParentId', 
+                'cardClass', 'classes', 'collectible', 'collectionText', 'cost', 'countAsCopyOfDbfId', 'dbfId', 
+                'durability', 'elite', 'faction', 'flavor', 'hasDiamondSkin', 'health', 'heroPowerDbfId', 
+                'hideCost', 'hideStats', 'howToEarn', 'howToEarnGolden', 'id', 'isBattlegroundsBuddy', 
+                'isBattlegroundsPoolMinion', 'isBattlegroundsPoolSpell', 'isMiniSet', 'mechanics', 
+                'mercenariesAbilityCooldown', 'mercenariesRole', 'multiClassGroup', 'name', 'overload', 
+                'puzzleType', 'questReward', 'race', 'races', 'rarity', 'referencedTags', 'set', 'spellDamage', 
+                'spellSchool', 'targetingArrowText', 'techLevel', 'text', 'type']
+
+
+def main():
+    start_time = time.time()
+
+    config = load_config()
+    if not config:
+        return
+    prev_build, current_build, locale, scale = config
+
     print("Fetching data from HearthstoneJSON...")
-    if get_prev_data(prev_build, locale):
-        prev_build_data = get_prev_data(prev_build, locale)
-    else:
+    prev_build_data = fetch_json(prev_build, locale)
+    current_build_data = fetch_json(current_build, locale)
+    if not prev_build_data or not current_build_data:
         return
-    if get_current_data(current_build, locale):
-        current_build_data = get_current_data(current_build, locale)
-    else:
-        return
-    print("Creating tables...")
-    create_tables(db, prev_build_data, current_build_data, allowed_types_set)
-    print("Checking changes...")
-    check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build)
-    finish_time = int((time.time() - start_time))
-    print(f"Done! Program finished in {finish_time // 60} min {finish_time % 60} s. The result can be viewed at result/CardChanges_{prev_build}-{current_build}.txt")
+    
+    db = setup_db()
+    
+    allowed_types = set_types(scale)
+    create_tables(db, prev_build_data, current_build_data, allowed_types)
+    compare_type = "dbfId" if prev_build >= 18336 else "id"
+    check_changes(db, set(), allowed_types, compare_type, prev_build, current_build)
+    elapsed_time = int(time.time() - start_time)
+    print(f"Done! Finished in {elapsed_time // 60} min {elapsed_time % 60} s. Results in result/CardChanges_{prev_build}-{current_build}.txt")
 
 if __name__ == "__main__":
     main()
