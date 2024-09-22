@@ -18,7 +18,7 @@ You should always use adjacent patches, not jump over ones. For example, don't c
 
 * `LOCALE`: The language you want texts to appear in the resulting file. By default it's enUS for English, but it can be changed to any language Hearthstone is localized in. Older patches might not have localized data for all languages.
 * `SCALE`: Type either `basic` or `full`. `basic` will generate fewer card change types, mostly what a regular user might care about. `full` will generate every single card change type for a patch.
-* `SAVE_DATA`: Type either 0 to not save data, or 1 to save data. Not saving data will make running the program longer each time, but will use less storage space. Saving data will make running the program faster in subsequent executions, but will use more storage space. 
+* `SAVE_DATA`: Type either `0` to not save data, or `1` to save data. Not saving data will make the program slower, but will use less storage space. Saving data will make the program faster in subsequent executions, but will use more storage space. 
 
 ## Usage
 After configuring, run `CardChangeLookup.bat`.
