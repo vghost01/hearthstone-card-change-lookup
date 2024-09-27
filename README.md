@@ -4,7 +4,9 @@ This is a tool to conveniently generate ALL changed content for a Hearthstone pa
 ## Setup
 Clone this repository with `git clone https://github.com/vghost01/hearthstone-card-change-lookup` or [download it as a zip](https://github.com/vghost01/hearthstone-card-change-lookup/archive/refs/heads/main.zip).
 
-Needs a working internet connection. Connects to HearthstoneJSON's site.
+You need to have [python](https://www.python.org/downloads/) and [pip](https://pip.pypa.io/en/stable/installation/) installed on your computer.
+
+The program needs a working internet connection. Connects to HearthstoneJSON's site.
 
 ## Configuration
 Before running anything, adjust `config.ini` in Notepad or a similar app.
