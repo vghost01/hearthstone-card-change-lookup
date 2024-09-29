@@ -5,7 +5,7 @@ import configparser
 import time
 from print_colors import printInfo, printError, printDebug, printWarn
 
-def create_tables(db, save_data, prev_build, current_build, prev_build_data, current_build_data, allowed_types):
+def create_tables(db, locale, save_data, prev_build, current_build, prev_build_data, current_build_data, allowed_types):
     printInfo("Creating tables...")
     def make_table(table_name):
         db.execute(f"""
@@ -64,32 +64,32 @@ def create_tables(db, save_data, prev_build, current_build, prev_build_data, cur
         )""")
 
     if save_data == 1:
-        printDebug(f"Checking if table for build {prev_build} already exists...")
+        printDebug(f"Checking if table for build {prev_build} locale {locale} already exists...")
         if db.execute("""
             SELECT name 
             FROM sqlite_master 
             WHERE type='table' 
             AND name=?;
-        """, (f"Cards_{prev_build}",)).fetchone():
+        """, (f"Cards_{prev_build}_{locale}",)).fetchone():
             printDebug("Already exists. Using saved data.")
             old_exists = True
         else:
             printDebug("Doesn't exist.")
             old_exists = False
-            make_table(f"Cards_{prev_build}")
-        printDebug(f"Checking if table for build {current_build} already exists...")
+            make_table(f"Cards_{prev_build}_{locale}")
+        printDebug(f"Checking if table for build {current_build} locale {locale} already exists...")
         if db.execute("""
             SELECT name 
             FROM sqlite_master 
             WHERE type='table' 
             AND name=?;
-        """, (f"Cards_{current_build}",)).fetchone():
+        """, (f"Cards_{current_build}_{locale}",)).fetchone():
             printDebug("Already exists. Using saved data.")
             new_exists = True
         else:
             printDebug("Doesn't exist.")
             new_exists = False
-            make_table(f"Cards_{current_build}")
+            make_table(f"Cards_{current_build}_{locale}")
     else:
         old_exists = False
         new_exists = False
@@ -126,23 +126,23 @@ def create_tables(db, save_data, prev_build, current_build, prev_build_data, cur
             printDebug(f"{len(values_batch)} cards added to {table_name}")
 
     if not old_exists:
-        old_name = "OldCards" if save_data == 0 else f"Cards_{prev_build}"
+        old_name = "OldCards" if save_data == 0 else f"Cards_{prev_build}_{locale}"
         printInfo(f"Creating table {old_name} with {len(prev_build_data)} cards")
         insert_cards(old_name, prev_build_data)
 
     if not new_exists:
-        new_name = "NewCards" if save_data == 0 else f"Cards_{current_build}"
+        new_name = "NewCards" if save_data == 0 else f"Cards_{current_build}_{locale}"
         printInfo(f"Creating table {new_name} with {len(current_build_data)} cards")
         insert_cards(new_name, current_build_data)
 
     if not old_exists or not new_exists:
         printInfo("Finished creating tables")
 
-def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build, save_data):
-    new_name = "NewCards" if save_data == 0 else f"Cards_{current_build}"
-    old_name = "OldCards" if save_data == 0 else f"Cards_{prev_build}"
+def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build, save_data, locale, added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt):
+    new_name = "NewCards" if save_data == 0 else f"Cards_{current_build}_{locale}"
+    old_name = "OldCards" if save_data == 0 else f"Cards_{prev_build}_{locale}"
     printInfo("Checking changes...")
-    with open(f"result/CardChanges_{prev_build}-{current_build}.txt", "w", encoding="utf-8") as CardChanges:
+    with open(f"result/CardChanges_{prev_build}-{current_build}_{locale}.txt", "w", encoding="utf-8") as CardChanges:
         # Search for added cards
         sql = f"""SELECT {new_name}.{compare_type}, {new_name}.id, {new_name}.name
                 FROM {new_name}
@@ -155,7 +155,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
             if row[0]:
                 has_cards = True
         if has_cards:
-            CardChanges.write("##############################\nThe folowing cards were added:\n##############################\n\n")
+            CardChanges.write(f"{"#" * len(added_msg[locale])}\n{added_msg[locale]}\n{"#" * len(added_msg[locale])}\n\n")
         for row in result:
             if row[0] == None:
                 continue
@@ -179,7 +179,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
             if row[0]:
                 has_cards = True
         if has_cards:
-            CardChanges.write("###############################\nThe folowing cards were removed:\n###############################\n\n")
+            CardChanges.write(f"{"#" * len(removed_msg[locale])}\n{removed_msg[locale]}\n{"#" * len(removed_msg[locale])}\n\n")
         for row in result:
             if row[0] == None:
                 continue
@@ -192,14 +192,15 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
         CardChanges.write("\n")
 
         #Search for changed cards
-        CardChanges.write("####################################\nThe folowing cards received changes:\n####################################\n\n")
+        CardChanges.write(f"{"#" * len(changed_msg[locale])}\n{changed_msg[locale]}\n{"#" * len(changed_msg[locale])}\n\n")
         for key in allowed_types:
             key_fixed = key if key != "set" and key != "text" else "\"" + key + "\""
-            sql = f"""SELECT {old_name}.{compare_type}, {old_name}.""" + key_fixed + f""", {new_name}.""" + key_fixed + f""", {old_name}.name, {old_name}.id
-            FROM {old_name}
-            LEFT JOIN {new_name}
-            ON {old_name}.{compare_type} = {new_name}.{compare_type}
-            WHERE (NOT {old_name}.""" + key_fixed + f"""={new_name}.""" + key_fixed + f""") OR ({old_name}.""" + key_fixed + f""" IS NULL AND NOT {new_name}.""" + key_fixed + """ IS NULL);"""
+            sql = f"""SELECT {old_name}.{compare_type}, {old_name}.{key_fixed}, {new_name}.{key_fixed}, {old_name}.name, {old_name}.id
+                FROM {old_name}
+                LEFT JOIN {new_name}
+                ON {old_name}.{compare_type} = {new_name}.{compare_type}
+                WHERE (NOT {old_name}.{key_fixed} = {new_name}.{key_fixed}) 
+                    OR ({old_name}.{key_fixed} IS NULL AND NOT {new_name}.{key_fixed} IS NULL);"""
             result = db.execute(sql).fetchall()
             for row in result:
                 row1 = str(row[1])
@@ -211,13 +212,13 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
                 if (row1 == row2):
                     continue
                 if compare_type == "dbfId":
-                    line1 = str(row[3]) + " (dbfId " + str(row[0]) + ", id " + str(row[4]) + ") - Type: " + key + "\n"
+                    line1 = f"{row[3]} (dbfId {row[0]}, id {row[4]}) - {type_txt[locale]} {key}\n"
                 else:
-                    line1 = str(row[3]) + " (id " + str(row[4]) + ") - Type: " + key + "\n"
+                    line1 = f"{row[3]} (id {row[4]}) - {type_txt[locale]} {key}\n"
                 CardChanges.write(line1)
-                line2 = "* Old: " + ("NULL" if len(row1) == 0 else row1.replace('\n', '\\n')) + "\n"
+                line2 = f"* {old_txt[locale]} " + ("NULL" if len(row1) == 0 else row1.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line2)
-                line3 = "* New: " + ("NULL" if len(row2) == 0 else row2.replace('\n', '\\n')) + "\n"
+                line3 = f"* {new_txt[locale]} " + ("NULL" if len(row2) == 0 else row2.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line3)
                 CardChanges.write("\n")
 
@@ -285,6 +286,110 @@ def set_types(scale):
                 'puzzleType', 'questReward', 'race', 'races', 'rarity', 'referencedTags', 'set', 'spellDamage', 
                 'spellSchool', 'targetingArrowText', 'techLevel', 'text', 'type']
 
+def set_locale_texts():
+    added_msg = {
+        "deDE": "Die folgenden Karten wurden hinzugefügt:",
+        "enUS": "The following cards were added:",
+        "esES": "Se añadieron las siguientes cartas:",
+        "esMX": "Se agregaron las siguientes cartas:",
+        "frFR": "Les cartes suivantes ont été ajoutées :",
+        "itIT": "Le seguenti carte sono state aggiunte:",
+        "jaJP": "次のカードが追加されました：",
+        "koKR": "다음 카드가 추가되었습니다:",
+        "plPL": "Dodano następujące karty:",
+        "ptBR": "Foram adicionados os seguintes cards:",
+        "ruRU": "Были добавлены следующие карты:",
+        "thTH": "พิ่มการ์ดต่อไปนี้:",
+        "zhCN": "添加了以下卡片：",
+        "zhTW": "添加了以下卡片："
+    }
+
+    removed_msg = {
+        "deDE": "Die folgenden Karten wurden entfernt:",
+        "enUS": "The following cards were removed:",
+        "esES": "Se eliminaron las siguientes cartas:",
+        "esMX": "Se quitaron las siguientes cartas:",
+        "frFR": "Les cartes suivantes ont été supprimées :",
+        "itIT": "Le seguenti carte sono state rimosse:",
+        "jaJP": "次のカードが削除されました：",
+        "koKR": "다음 카드가 제거되었습니다:",
+        "plPL": "Usunięto następujące karty:",
+        "ptBR": "Foram removidos os seguintes cards:",
+        "ruRU": "Были удалены следующие карты:",
+        "thTH": "ลบการ์ดต่อไปนี้:",
+        "zhCN": "移除了以下卡片：",
+        "zhTW": "移除了以下卡片："
+    }    
+
+    changed_msg = {
+        "deDE": "Die folgenden Karten wurden geändert:",
+        "enUS": "The following cards received changes:",
+        "esES": "Las siguientes cartas recibieron cambios:",
+        "esMX": "Las siguientes cartas recibieron cambios:",
+        "frFR": "Les cartes suivantes ont reçu des modifications :",
+        "itIT": "Le seguenti carte hanno ricevuto modifiche:",
+        "jaJP": "次のカードに変更が加えられました：",
+        "koKR": "다음 카드가 변경되었습니다:",
+        "plPL": "Następujące karty zostały zmienione:",
+        "ptBR": "Os seguintes cards receberam alterações:",
+        "ruRU": "Следующие карты были изменены:",
+        "thTH": "การ์ดต่อไปนี้ได้รับการเปลี่ยนแปลง:",
+        "zhCN": "以下卡片已被更改：",
+        "zhTW": "以下卡片已被更改："
+    }
+
+    type_txt = {
+        "deDE": "Typ:",
+        "enUS": "Type:",
+        "esES": "Tipo:",
+        "esMX": "Tipo:",
+        "frFR": "Type :",
+        "itIT": "Tipo:",
+        "jaJP": "タイプ：",
+        "koKR": "유형:",
+        "plPL": "Typ:",
+        "ptBR": "Tipo:",
+        "ruRU": "Тип:",
+        "thTH": "ประเภท:",
+        "zhCN": "类型：",
+        "zhTW": "类型："
+    }
+
+    old_txt = {
+        "deDE": "Alt:",
+        "enUS": "Old:",
+        "esES": "Antes:",
+        "esMX": "Antes:",
+        "frFR": "Précédemment :",
+        "itIT": "Prima:",
+        "jaJP": "旧：",
+        "koKR": "변경 전:",
+        "plPL": "Stara wersja:",
+        "ptBR": "Antes:",
+        "ruRU": "Было:",
+        "thTH": "เก่า:",
+        "zhCN": "旧版：",
+        "zhTW": "舊版："
+    }
+
+    new_txt = {
+        "deDE": "Neu:",
+        "enUS": "New:",
+        "esES": "Ahora:",
+        "esMX": "Ahora:",
+        "frFR": "Maintenant :",
+        "itIT": "Ora:",
+        "jaJP": "新：",
+        "koKR": "변경 후:",
+        "plPL": "Nowa wersja:",
+        "ptBR": "Agora:",
+        "ruRU": "Стало:",
+        "thTH": "ใหม่:",
+        "zhCN": "类型：",
+        "zhTW": "新版："
+    }
+
+    return added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt
 
 def main():
     start_time = time.time()
@@ -293,6 +398,8 @@ def main():
     if not config:
         return
     prev_build, current_build, locale, scale, save_data = config
+
+    added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt = set_locale_texts()
 
     printInfo("Fetching data from HearthstoneJSON...")
     prev_build_data = fetch_json(prev_build, locale)
@@ -303,11 +410,11 @@ def main():
     db = setup_db(save_data)
     
     allowed_types = set_types(scale)
-    create_tables(db, save_data, prev_build, current_build, prev_build_data, current_build_data, allowed_types)
+    create_tables(db, locale, save_data, prev_build, current_build, prev_build_data, current_build_data, allowed_types)
     compare_type = "dbfId" if prev_build >= 18336 else "id"
-    check_changes(db, set(), allowed_types, compare_type, prev_build, current_build, save_data)
+    check_changes(db, set(), allowed_types, compare_type, prev_build, current_build, save_data, locale, added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt)
     elapsed_time = int(time.time() - start_time)
-    printInfo(f"Done! Finished in {elapsed_time // 60} min {elapsed_time % 60} s. Results in result/CardChanges_{prev_build}-{current_build}.txt")
+    printInfo(f"Done! Finished in {elapsed_time // 60} min {elapsed_time % 60} s. Results in result/CardChanges_{prev_build}-{current_build}_{locale}.txt")
 
 if __name__ == "__main__":
     main()
