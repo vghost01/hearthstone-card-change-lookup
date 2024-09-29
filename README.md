@@ -23,6 +23,8 @@ You should always use adjacent patches, not jump over ones. For example, don't c
 * `SAVE_DATA`: Type either `0` to not save data, or `1` to save data. Not saving data will make the program slower, but will use less storage space. Saving data will make the program faster in subsequent executions, but will use more storage space. 
 
 ## Usage
-After configuring, run `CardChangeLookup.bat`.
+If it's your first time using the program, run `init.bat` first. This only needs to be run once.
+
+Then after configuring, run `CardChangeLookup.bat` for the process itself.
 
 Alternatively on Mac/Linux, you can make `src/process.py` executable and run it from terminal.
