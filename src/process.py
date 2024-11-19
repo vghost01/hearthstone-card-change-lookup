@@ -3,9 +3,9 @@ import os
 import requests
 import configparser
 import time
-from print_colors import printInfo, printError, printDebug, printWarn
+from print_colors import printInfo, printError, printDebug
 
-def create_tables(db, locale, save_data, prev_build, current_build, prev_build_data, current_build_data, allowed_types):
+def create_tables(db, prev_build_data, current_build_data, allowed_types):
     printInfo("Creating tables...")
     def make_table(table_name):
         db.execute(f"""
@@ -63,92 +63,44 @@ def create_tables(db, locale, save_data, prev_build, current_build, prev_build_d
         type TEXT 
         )""")
 
-    if save_data == 1:
-        printDebug(f"Checking if table for build {prev_build} locale {locale} already exists...")
-        if db.execute("""
-            SELECT name 
-            FROM sqlite_master 
-            WHERE type='table' 
-            AND name=?;
-        """, (f"Cards_{prev_build}_{locale}",)).fetchone():
-            printDebug("Already exists. Using saved data.")
-            old_exists = True
-        else:
-            printDebug("Doesn't exist.")
-            old_exists = False
-            make_table(f"Cards_{prev_build}_{locale}")
-        printDebug(f"Checking if table for build {current_build} locale {locale} already exists...")
-        if db.execute("""
-            SELECT name 
-            FROM sqlite_master 
-            WHERE type='table' 
-            AND name=?;
-        """, (f"Cards_{current_build}_{locale}",)).fetchone():
-            printDebug("Already exists. Using saved data.")
-            new_exists = True
-        else:
-            printDebug("Doesn't exist.")
-            new_exists = False
-            make_table(f"Cards_{current_build}_{locale}")
-    else:
-        old_exists = False
-        new_exists = False
-        make_table("OldCards")
-        make_table("NewCards")
+    make_table("OldCards")
+    make_table("NewCards")
 
     def insert_cards(table_name, cards):
         columns = [f'"{change_type}"' if change_type in ["set", "text"] else change_type for change_type in allowed_types]
         sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join(['?'] * len(columns))})"
         values_batch = []
         
-        for card in cards:
-            values = []
-            for change_type in allowed_types:
-                if change_type in card:
-                    value = card[change_type]
-                    if isinstance(value, int):
-                        values.append(str(value))
-                    elif isinstance(value, list):
-                        values.append(",".join(value))
-                    else:
-                        values.append(str(value))
-                else:
-                    values.append(None)
-                
-            values_batch.append(tuple(values))
-            if len(values_batch) >= 1000:
-                db.executemany(sql, values_batch)
-                printDebug(f"{len(values_batch)} cards added to {table_name}")
-                values_batch.clear()
+        values_batch = [
+            tuple(
+                str(card.get(change_type)) if isinstance(card.get(change_type), (int, str))
+                else ",".join(card[change_type]) if isinstance(card.get(change_type), list)
+                else None
+                for change_type in allowed_types
+            )
+            for card in cards
+        ]
 
-        if values_batch:
-            db.executemany(sql, values_batch)
-            printDebug(f"{len(values_batch)} cards added to {table_name}")
+        db.executemany(sql, values_batch)
+        printDebug(f"{len(values_batch)} cards added to {table_name}")
 
-    if not old_exists:
-        old_name = "OldCards" if save_data == 0 else f"Cards_{prev_build}_{locale}"
-        printInfo(f"Creating table {old_name} with {len(prev_build_data)} cards")
-        insert_cards(old_name, prev_build_data)
+    printInfo(f"Creating table OldCards with {len(prev_build_data)} cards")
+    insert_cards("OldCards", prev_build_data)
 
-    if not new_exists:
-        new_name = "NewCards" if save_data == 0 else f"Cards_{current_build}_{locale}"
-        printInfo(f"Creating table {new_name} with {len(current_build_data)} cards")
-        insert_cards(new_name, current_build_data)
+    printInfo(f"Creating table NewCards with {len(current_build_data)} cards")
+    insert_cards("NewCards", current_build_data)
 
-    if not old_exists or not new_exists:
-        printInfo("Finished creating tables")
+    printInfo("Finished creating tables")
 
-def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build, save_data, locale, added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt):
-    new_name = "NewCards" if save_data == 0 else f"Cards_{current_build}_{locale}"
-    old_name = "OldCards" if save_data == 0 else f"Cards_{prev_build}_{locale}"
+def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, current_build, locale, added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt):
     printInfo("Checking changes...")
     with open(f"result/CardChanges_{prev_build}-{current_build}_{locale}.txt", "w", encoding="utf-8") as CardChanges:
         # Search for added cards
-        sql = f"""SELECT {new_name}.{compare_type}, {new_name}.id, {new_name}.name
-                FROM {new_name}
-                LEFT JOIN {old_name}
-                ON {new_name}.{compare_type} = {old_name}.{compare_type}
-                WHERE ({old_name}.{compare_type} IS NULL);"""
+        sql = f"""SELECT NewCards.{compare_type}, NewCards.id, NewCards.name
+                FROM NewCards
+                LEFT JOIN OldCards
+                ON NewCards.{compare_type} = OldCards.{compare_type}
+                WHERE (OldCards.{compare_type} IS NULL);"""
         result = db.execute(sql).fetchall()
         has_cards = False
         for row in result:
@@ -168,11 +120,11 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
         CardChanges.write("\n")
 
         #Search for removed cards
-        sql = f"""SELECT {old_name}.{compare_type}, {old_name}.id, {old_name}.name
-                FROM {old_name}
-                LEFT JOIN {new_name}
-                ON {old_name}.{compare_type} = {new_name}.{compare_type}
-                WHERE ({new_name}.{compare_type} IS NULL);"""
+        sql = f"""SELECT OldCards.{compare_type}, OldCards.id, OldCards.name
+                FROM OldCards
+                LEFT JOIN NewCards
+                ON OldCards.{compare_type} = NewCards.{compare_type}
+                WHERE (NewCards.{compare_type} IS NULL);"""
         result = db.execute(sql).fetchall()
         has_cards = False
         for row in result:
@@ -195,12 +147,12 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
         CardChanges.write(f"{"#" * len(changed_msg[locale])}\n{changed_msg[locale]}\n{"#" * len(changed_msg[locale])}\n\n")
         for key in allowed_types:
             key_fixed = key if key != "set" and key != "text" else "\"" + key + "\""
-            sql = f"""SELECT {old_name}.{compare_type}, {old_name}.{key_fixed}, {new_name}.{key_fixed}, {old_name}.name, {old_name}.id
-                FROM {old_name}
-                LEFT JOIN {new_name}
-                ON {old_name}.{compare_type} = {new_name}.{compare_type}
-                WHERE (NOT {old_name}.{key_fixed} = {new_name}.{key_fixed}) 
-                    OR ({old_name}.{key_fixed} IS NULL AND NOT {new_name}.{key_fixed} IS NULL);"""
+            sql = f"""SELECT OldCards.{compare_type}, OldCards.{key_fixed}, NewCards.{key_fixed}, OldCards.name, OldCards.id
+                FROM OldCards
+                LEFT JOIN NewCards
+                ON OldCards.{compare_type} = NewCards.{compare_type}
+                WHERE (NOT OldCards.{key_fixed} = NewCards.{key_fixed}) 
+                    OR (OldCards.{key_fixed} IS NULL AND NOT NewCards.{key_fixed} IS NULL);"""
             result = db.execute(sql).fetchall()
             for row in result:
                 row1 = str(row[1])
@@ -232,7 +184,6 @@ def load_config():
         current_build = settings.getint("NEW_BUILD")
         locale = settings.get("LOCALE")
         scale = settings.get("SCALE")
-        save_data = settings.getint("SAVE_DATA")
     except:
         printError("Could not load contents of config.ini. Check that all values are correctly formatted.")
         return None
@@ -246,11 +197,8 @@ def load_config():
     if scale not in ["basic", "full"]:
         printError("Invalid SCALE in config.ini.")
         return None
-    if save_data not in [0, 1]:
-        printError("Invalid SAVE_DATA in config.ini")
-        return None
     
-    return prev_build, current_build, locale, scale, save_data
+    return prev_build, current_build, locale, scale
 
 def fetch_json(build, locale):
     url = f"https://api.hearthstonejson.com/v1/{build}/{locale}/cards.json"
@@ -261,13 +209,10 @@ def fetch_json(build, locale):
         printError(f"Failed to fetch data for build {build}. Double-check your build numbers and locale in config.ini. Status code: {response.status_code}")
         return None
 
-def setup_db(save_data):
-    if save_data == 0:
-        if os.path.exists("src/cards.db"):
-            os.remove("src/cards.db")
-    db = sqlite3.connect("src/cards.db")
-    db.isolation_level = None
-    return db
+def setup_db():
+    db = sqlite3.connect(":memory:")
+    dbCur = db.cursor()
+    return dbCur
 
 def set_types(scale):
     if scale == "basic":
@@ -397,7 +342,7 @@ def main():
     config = load_config()
     if not config:
         return
-    prev_build, current_build, locale, scale, save_data = config
+    prev_build, current_build, locale, scale = config
 
     added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt = set_locale_texts()
 
@@ -407,12 +352,12 @@ def main():
     if not prev_build_data or not current_build_data:
         return
     
-    db = setup_db(save_data)
+    db = setup_db()
     
     allowed_types = set_types(scale)
-    create_tables(db, locale, save_data, prev_build, current_build, prev_build_data, current_build_data, allowed_types)
+    create_tables(db, prev_build_data, current_build_data, allowed_types)
     compare_type = "dbfId" if prev_build >= 18336 else "id"
-    check_changes(db, set(), allowed_types, compare_type, prev_build, current_build, save_data, locale, added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt)
+    check_changes(db, set(), allowed_types, compare_type, prev_build, current_build, locale, added_msg, removed_msg, changed_msg, type_txt, old_txt, new_txt)
     elapsed_time = int(time.time() - start_time)
     printInfo(f"Done! Finished in {elapsed_time // 60} min {elapsed_time % 60} s. Results in result/CardChanges_{prev_build}-{current_build}_{locale}.txt")
 
