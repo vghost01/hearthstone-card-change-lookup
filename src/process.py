@@ -107,7 +107,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
             if row[0]:
                 has_cards = True
         if has_cards:
-            CardChanges.write(f"{"#" * len(added_msg[locale])}\n{added_msg[locale]}\n{"#" * len(added_msg[locale])}\n\n")
+            CardChanges.write(f"{'#' * len(added_msg[locale])}\n{added_msg[locale]}\n{'#' * len(added_msg[locale])}\n\n")
         for row in result:
             if row[0] == None:
                 continue
@@ -131,7 +131,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
             if row[0]:
                 has_cards = True
         if has_cards:
-            CardChanges.write(f"{"#" * len(removed_msg[locale])}\n{removed_msg[locale]}\n{"#" * len(removed_msg[locale])}\n\n")
+            CardChanges.write(f"{'#' * len(removed_msg[locale])}\n{removed_msg[locale]}\n{'#' * len(removed_msg[locale])}\n\n")
         for row in result:
             if row[0] == None:
                 continue
@@ -144,7 +144,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
         CardChanges.write("\n")
 
         #Search for changed cards
-        CardChanges.write(f"{"#" * len(changed_msg[locale])}\n{changed_msg[locale]}\n{"#" * len(changed_msg[locale])}\n\n")
+        CardChanges.write(f"{'#' * len(changed_msg[locale])}\n{changed_msg[locale]}\n{'#' * len(changed_msg[locale])}\n\n")
         for key in allowed_types:
             key_fixed = key if key != "set" and key != "text" else "\"" + key + "\""
             sql = f"""SELECT OldCards.{compare_type}, OldCards.{key_fixed}, NewCards.{key_fixed}, OldCards.name, OldCards.id
