@@ -145,6 +145,7 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
 
         #Search for changed cards
         CardChanges.write(f"{'#' * len(changed_msg[locale])}\n{changed_msg[locale]}\n{'#' * len(changed_msg[locale])}\n\n")
+        CardChangesDict = {}
         for key in allowed_types:
             key_fixed = key if key != "set" and key != "text" else "\"" + key + "\""
             sql = f"""SELECT OldCards.{compare_type}, OldCards.{key_fixed}, NewCards.{key_fixed}, OldCards.name, OldCards.id
@@ -163,16 +164,31 @@ def check_changes(db, excluded_dbfIds, allowed_types, compare_type, prev_build, 
                     row2 = ""
                 if (row1 == row2):
                     continue
+
+                if not row[0] in CardChangesDict.keys():
+                    CardChangesDict[row[0]] = {}
+                CardChangesDict[row[0]][key] = (row, compare_type)
+
+        for dbfId, rows in CardChangesDict.items():
+            for key, t in rows.items():
+
+                row = t[0]
+                compare_type = t[1]
+
+                row1 = str(row[1])
+                row2 = str(row[2])
+
                 if compare_type == "dbfId":
                     line1 = f"{row[3]} (dbfId {row[0]}, id {row[4]}) - {type_txt[locale]} {key}\n"
                 else:
                     line1 = f"{row[3]} (id {row[4]}) - {type_txt[locale]} {key}\n"
+
                 CardChanges.write(line1)
                 line2 = f"* {old_txt[locale]} " + ("NULL" if len(row1) == 0 else row1.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line2)
                 line3 = f"* {new_txt[locale]} " + ("NULL" if len(row2) == 0 else row2.replace('\n', '\\n')) + "\n"
                 CardChanges.write(line3)
-                CardChanges.write("\n")
+            CardChanges.write("\n\n")
 
 def load_config():
     config = configparser.ConfigParser()
