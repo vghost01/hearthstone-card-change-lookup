@@ -1,3 +1,4 @@
-result/
+result/*
+!result/results_will_appear_here
 src/cards.db
 src/__pycache__

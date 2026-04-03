@@ -24,8 +24,10 @@ You should always use adjacent patches, not jump over ones. For example, don't c
 * `SCALE`: Type either `basic` or `full`. `basic` will generate fewer card change types, mostly what a regular user might care about. `full` will generate every single card change type for a patch.
 
 ## Usage
-If it's your first time using the program, run `init.bat` first. This only needs to be run once.
+If it's your first time using the program, install requirements first. This only needs to be done once.
+* On Windows: `pip install -r requirements.txt`
+* On Linux/Mac: `pip3 install -r requirements.txt`
 
-Then after configuring, run `CardChangeLookup.bat` for the process itself.
-
-Alternatively on Mac/Linux, you can direclty run `python3 src/process.py` from terminal.
+Then after configuring, to run the process itself:
+* On Windows: Simply run `run_script.bat`
+* On Linux/Mac: Run `python3 src\process.py` from the root folder.
